@@ -15,6 +15,7 @@ Threads принимает только HTTPS-редиректы, поэтому
        и печатает готовые строки для .env.
 """
 
+import argparse
 import os
 import sys
 import urllib.parse
@@ -28,9 +29,15 @@ AUTH_URL = "https://threads.net/oauth/authorize"
 TOKEN_URL = "https://graph.threads.net/oauth/access_token"
 EXCHANGE_URL = "https://graph.threads.net/access_token"
 
-SCOPES = ["threads_basic", "threads_content_publish", "threads_keyword_search"]
-# Без keyword_search бот работает, просто берёт темы из brand.py.
-REQUIRED_SCOPES = ["threads_basic", "threads_content_publish"]
+# По умолчанию просим только два скоупа, которые работают сразу.
+#
+# threads_keyword_search сюда намеренно не входит: со стандартным доступом он
+# возвращает только посты самого тестировщика, а чтобы искать чужие (то есть
+# посты мебельных фабрик), нужен Advanced Access через App Review. Если скоуп
+# не настроен в приложении, запрос авторизации с ним может быть отклонён
+# целиком — поэтому он добавляется явным флагом --with-search.
+SCOPES = ["threads_basic", "threads_content_publish"]
+SEARCH_SCOPE = "threads_keyword_search"
 
 
 def ask(prompt, env_key=None):
@@ -65,8 +72,26 @@ def extract_code(pasted):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Получение токена Threads")
+    parser.add_argument(
+        "--with-search",
+        action="store_true",
+        help=(
+            f"дополнительно запросить {SEARCH_SCOPE}. Только если скоуп уже "
+            "настроен в приложении, иначе авторизация может быть отклонена"
+        ),
+    )
+    args = parser.parse_args()
+    scopes = SCOPES + ([SEARCH_SCOPE] if args.with_search else [])
+
     print(__doc__)
     print("-" * 70)
+    print(f"Запрашиваемые скоупы: {', '.join(scopes)}")
+    if not args.with_search:
+        print(
+            f"({SEARCH_SCOPE} не запрошен — бот будет брать темы из brand.py.\n"
+            " Добавить: python get_token.py --with-search)"
+        )
 
     app_id = ask("App ID (Идентификатор приложения Threads)", "THREADS_APP_ID")
     app_secret = ask("App Secret (Секрет приложения)", "THREADS_APP_SECRET")
@@ -81,7 +106,7 @@ def main():
         {
             "client_id": app_id,
             "redirect_uri": redirect_uri,
-            "scope": ",".join(SCOPES),
+            "scope": ",".join(scopes),
             "response_type": "code",
         }
     )

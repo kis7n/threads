@@ -205,6 +205,10 @@ class ThreadsClient:
             log.warning("не удалось получить permalink для %s: %s", post_id, exc)
             return None
 
+    def me(self):
+        """Свой профиль: {'id': ..., 'username': ...}."""
+        return self._get(self.user_id, fields="id,username")
+
     # ------------------------------------------------------------------ поиск
 
     def keyword_search(self, query, search_type="TOP", limit=25):

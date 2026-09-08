@@ -63,10 +63,25 @@ def _fallback_signal(reason):
     }
 
 
+def _own_username(client):
+    """Свой username, чтобы не анализировать собственные посты.
+
+    Со стандартным доступом keyword_search возвращает только посты самого
+    тестировщика — то есть наши же. Без этого фильтра бот скармливал бы себе
+    собственную выдачу и ходил по кругу.
+    """
+    try:
+        return (client.me().get("username") or "").lower()
+    except ThreadsError as exc:
+        log.warning("не удалось узнать свой username: %s", exc)
+        return ""
+
+
 def _collect(client):
     """Обходит SEARCH_QUERIES и собирает уникальные посты."""
     seen_ids = set()
     observations = []
+    own = _own_username(client)
 
     for query in brand.SEARCH_QUERIES:
         try:
@@ -84,6 +99,8 @@ def _collect(client):
             post_id = item.get("id")
             text = (item.get("text") or "").strip()
             if not text or post_id in seen_ids or len(text) < _MIN_TEXT_LEN:
+                continue
+            if own and (item.get("username") or "").lower() == own:
                 continue
             seen_ids.add(post_id)
             observations.append(
