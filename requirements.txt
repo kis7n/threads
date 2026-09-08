@@ -1,0 +1,4 @@
+anthropic>=1.4.0
+python-telegram-bot[job-queue]==20.7
+python-dotenv
+requests
