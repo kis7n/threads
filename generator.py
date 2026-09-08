@@ -46,12 +46,35 @@ class PostBatch(BaseModel):
 def _system_prompt():
     advantages = "\n".join(f"- {item}" for item in brand.ADVANTAGES)
     rules = "\n".join(f"- {item}" for item in brand.CONTENT_RULES)
+    applications = "\n".join(f"- {item}" for item in brand.APPLICATIONS)
+    specs = "\n".join(f"- {key}: {value}" for key, value in brand.SPECS.items())
+    skus = "\n".join(
+        f"- {p['sku']} — {p['tagline']}; под {p['best_for']}; "
+        f"схватывается за {p['set_time']}" + (" (хит продаж)" if p["hit"] else "")
+        for p in brand.PRODUCTS
+    )
 
     return f"""Ты пишешь вирусные посты для Threads от лица бренда {brand.BRAND} \
-({brand.SITE}) — это {brand.PRODUCT['category']}.
+({brand.SITE}) — это {brand.PRODUCT['category']}. Производитель — \
+{brand.LEGAL_ENTITY}.
 
 ЧТО ПРОДАЁМ
 {brand.PRODUCT['what']}
+
+ДВЕ МАРКИ
+{skus}
+Выбор между ними — сам по себе хорошая тема: под тонкий поролон и ткань берут
+215, на каркас и блоки — 225.
+
+ХАРАКТЕРИСТИКИ
+{specs}
+
+ЦЕНЫ (других цифр по деньгам не существует)
+- {brand.PRICING['base']}, {brand.PRICING['tiers']}
+- минимальный заказ — {brand.PRICING['min_order']}
+
+ГДЕ ПРИМЕНЯЕТСЯ
+{applications}
 
 ПРЕИМУЩЕСТВА (единственный источник фактов о продукте)
 {advantages}
@@ -69,6 +92,7 @@ def _system_prompt():
 - продукт появляется как решение боли, а не как баннер
 - упоминай {brand.BRAND} мягко: пост должен быть смешным даже без бренда
 - максимум одно упоминание бренда на пост, {brand.SITE} — не в каждом посте
+- если называешь марку — называй конкретную (225 или 215), а не «наш клей»
 - без хэштегов, без эмодзи-спама (0-1 эмодзи максимум)
 - жёсткий лимит: {brand.TARGET_POST_CHARS} символов на пост
 
